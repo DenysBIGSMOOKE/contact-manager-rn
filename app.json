@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Contact Manager",
+    "slug": "contact-manager-rn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Додатку потрібен доступ до галереї для вибору аватара контакту."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/com_1.png",
+        "backgroundColor": "#2563EB"
+      },
+      "permissions": [
+        "READ_MEDIA_IMAGES"
+      ],
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "web": {},
+    "plugins": [
+      "expo-image-picker"
+    ],
+    "icon": "./assets/com_1.png",
+    "splash": {
+      "image": "./assets/com_1.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    }
+  }
+}
