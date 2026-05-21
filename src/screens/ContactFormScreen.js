@@ -22,22 +22,22 @@ import {
   PHONE_REGIONS,
   detectRegionByPhone,
   formatPhoneForRegion,
+  getPhonePrefix,
   getRegionById,
+  normalizePhoneForSave,
 } from '../utils/phoneUtils';
 
 export default function ContactFormScreen({ navigation, route }) {
   const contact = route.params?.contact;
   const isEditing = Boolean(contact);
-  const { addContact, updateContact } = useContacts();
+  const { contacts, addContact, updateContact } = useContacts();
   const initialRegion = contact?.region ?? detectRegionByPhone(contact?.phone).id;
 
   const [values, setValues] = useState({
     id: contact?.id,
     name: contact?.name ?? '',
     region: initialRegion,
-    phone: contact?.phone
-      ? formatPhoneForRegion(contact.phone, initialRegion)
-      : `${getRegionById(initialRegion).code} `,
+    phone: contact?.phone ? formatPhoneForRegion(contact.phone, initialRegion, { keepPrefix: true }) : getPhonePrefix(initialRegion),
     email: contact?.email ?? '',
     avatarUri: contact?.avatarUri ?? '',
     avatarColor: contact?.avatarColor ?? '#2563EB',
@@ -70,19 +70,17 @@ export default function ContactFormScreen({ navigation, route }) {
   }
 
   function updatePhone(value) {
-    const formattedPhone = formatPhoneForRegion(value, values.region);
+    const formattedPhone = formatPhoneForRegion(value, values.region, { keepPrefix: true });
 
     setValues((prev) => ({ ...prev, phone: formattedPhone }));
     setErrors((prev) => ({ ...prev, phone: undefined }));
   }
 
   function changeRegion(regionId) {
-    const region = getRegionById(regionId);
-
     setValues((prev) => ({
       ...prev,
       region: regionId,
-      phone: prev.phone ? formatPhoneForRegion(prev.phone, regionId) : `${region.code} `,
+      phone: getPhonePrefix(regionId),
     }));
     setErrors((prev) => ({ ...prev, phone: undefined }));
   }
@@ -117,7 +115,7 @@ export default function ContactFormScreen({ navigation, route }) {
   }
 
   function handleSave() {
-    const validationErrors = validateContact(values);
+    const validationErrors = validateContact(values, contacts);
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -127,7 +125,7 @@ export default function ContactFormScreen({ navigation, route }) {
     const contactToSave = {
       ...values,
       name: values.name.trim(),
-      phone: formatPhoneForRegion(values.phone, values.region).trim(),
+      phone: normalizePhoneForSave(values.phone, values.region),
       email: values.email.trim(),
     };
 
@@ -183,7 +181,7 @@ export default function ContactFormScreen({ navigation, route }) {
             placeholder={getRegionById(values.region).placeholder}
             value={values.phone}
             error={errors.phone}
-            helperText="Номер автоматично форматується пробілами під вибраний регіон."
+            helperText="Код країни додається автоматично. Вводьте тільки решту номера після коду."
             icon="call-outline"
             keyboardType="phone-pad"
             onFocus={() => scrollToInput(360)}

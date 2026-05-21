@@ -75,49 +75,62 @@ export function digitsOnly(value = '') {
   return String(value).replace(/\D/g, '');
 }
 
+export function getPhoneDigitsForComparison(phone = '') {
+  return digitsOnly(phone);
+}
+
 export function detectRegionByPhone(phone = '') {
   const digits = digitsOnly(phone);
   const detected = PHONE_REGIONS.find((region) => digits.startsWith(digitsOnly(region.code)));
+
   return detected ?? PHONE_REGIONS[0];
 }
 
-function normalizeDigitsForRegion(value, region) {
+function getNationalDigitsLimit(region) {
+  const codeLength = digitsOnly(region.code).length;
+
+  return Math.max(region.maxDigits - codeLength, 0);
+}
+
+export function getPhonePrefix(regionId = 'ua') {
+  const region = getRegionById(regionId);
+
+  return `${region.code} `;
+}
+
+function stripSelectedRegionCodeOnce(value, region) {
+  const text = String(value ?? '').trimStart();
   const codeDigits = digitsOnly(region.code);
-  let digits = digitsOnly(value);
+  let digits = digitsOnly(text);
 
   if (!digits) {
-    return codeDigits;
+    return '';
   }
 
-  if (region.id === 'ua' && digits.startsWith('0')) {
-    digits = `${codeDigits}${digits.slice(1)}`;
+  // Якщо поле вже містить автододаний код країни, прибираємо тільки цей перший код.
+  // Важливо: не видаляємо повторно такі ж цифри з локального номера.
+  // Наприклад, для US +1 номер може починатися з 1, а для CZ +420 — з 420.
+  if (text.startsWith(region.code) || text.startsWith(codeDigits) || text.startsWith(`00${codeDigits}`)) {
+    if (text.startsWith(`00${codeDigits}`)) {
+      digits = digits.slice(codeDigits.length + 2);
+    } else {
+      digits = digits.slice(codeDigits.length);
+    }
   }
 
-  if (region.id === 'pl' && digits.length === 9) {
-    digits = `${codeDigits}${digits}`;
+  return digits;
+}
+
+export function getNationalDigitsForRegion(value = '', regionId = 'ua') {
+  const region = getRegionById(regionId);
+  let digits = stripSelectedRegionCodeOnce(value, region);
+
+  // Дозволяємо вводити локальні номери з початковим 0 для країн, де так часто пишуть.
+  if ((region.id === 'ua' || region.id === 'de') && digits.startsWith('0')) {
+    digits = digits.slice(1);
   }
 
-  if (region.id === 'cz' && digits.length === 9) {
-    digits = `${codeDigits}${digits}`;
-  }
-
-  if (region.id === 'us' && digits.length === 10) {
-    digits = `${codeDigits}${digits}`;
-  }
-
-  if (region.id === 'md' && digits.length === 8) {
-    digits = `${codeDigits}${digits}`;
-  }
-
-  if (region.id === 'de' && digits.startsWith('0')) {
-    digits = `${codeDigits}${digits.slice(1)}`;
-  }
-
-  if (!digits.startsWith(codeDigits)) {
-    digits = `${codeDigits}${digits}`;
-  }
-
-  return digits.slice(0, region.maxDigits);
+  return digits.slice(0, getNationalDigitsLimit(region));
 }
 
 function groupDigits(digits, groups) {
@@ -139,12 +152,24 @@ function groupDigits(digits, groups) {
   return chunks;
 }
 
-export function formatPhoneForRegion(value, regionId = 'ua') {
+export function formatPhoneForRegion(value = '', regionId = 'ua', options = {}) {
+  const { keepPrefix = false } = options;
   const region = getRegionById(regionId);
-  const digits = normalizeDigitsForRegion(value, region);
-  const chunks = groupDigits(digits, region.groups);
+  const codeDigits = digitsOnly(region.code);
+  const nationalDigits = getNationalDigitsForRegion(value, region.id);
 
-  return chunks.length ? `+${chunks.join(' ')}` : '';
+  if (!nationalDigits) {
+    return keepPrefix ? getPhonePrefix(region.id) : '';
+  }
+
+  const fullDigits = `${codeDigits}${nationalDigits}`.slice(0, region.maxDigits);
+  const chunks = groupDigits(fullDigits, region.groups);
+
+  return chunks.length ? `+${chunks.join(' ')}` : getPhonePrefix(region.id);
+}
+
+export function normalizePhoneForSave(value = '', regionId = 'ua') {
+  return formatPhoneForRegion(value, regionId, { keepPrefix: false }).trim();
 }
 
 export function isPhoneValidForRegion(phone, regionId = 'ua') {
