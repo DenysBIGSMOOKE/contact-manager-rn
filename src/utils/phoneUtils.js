@@ -27,9 +27,11 @@ export const PHONE_REGIONS = [
     shortName: 'DE',
     flag: '🇩🇪',
     code: '+49',
-    minDigits: 10,
-    maxDigits: 14,
-    groups: [2, 3, 3, 4, 2],
+    // Для навчального проєкту фіксуємо німецький номер у форматі з прикладу:
+    // +49 151 234 5678. Це не дає вводити занадто довгий номер.
+    minDigits: 12,
+    maxDigits: 12,
+    groups: [2, 3, 3, 4],
     placeholder: '+49 151 234 5678',
   },
   {
